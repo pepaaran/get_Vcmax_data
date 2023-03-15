@@ -1,5 +1,6 @@
 # This script runs the full workflow to extract Vcmax25 site information and
 # the corresponding drivers to run the P-model, from WorldClim data.
+# Based on the GECO data archive structure
 
 # Load functions
 source("R/aggregate_growingseasonmean.R")
