@@ -38,7 +38,7 @@ format_forcing <- function(
         fgravel = 0.1)
     ),
     verbose = TRUE){
-  browser()
+
   # Expand forcing to 365 days and get into nested format
   drivers <- forcing_wc |>
     dplyr::mutate(lon = NULL, lat = NULL, elv = NULL) |>
