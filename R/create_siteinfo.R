@@ -6,9 +6,8 @@
 create_siteinfo <- function(df){
   # Remove duplicates of site data
   df |>
-    dplyr::group_by(site) |>
+    dplyr::group_by(sitename) |>
     dplyr::summarise(lon = unique(lon),
                      lat = unique(lat),
-                     elv = unique(elv)) |>
-    dplyr::rename(sitename = site)
+                     elv = unique(elv))
 }

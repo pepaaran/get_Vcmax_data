@@ -2,7 +2,8 @@
 
 # This function reads the relevant Vcmax25 data from
 # the Atkin et al. 2015 GlobResp dataset and returns
-# a data.frame of Vcmax observations per site and species
+# a data.frame of Vcmax25 observations per site and species
+# with the same units that the P-model uses
 
 read_vcmax25 <- function(
     filename = "data-raw/GlobResp database_Atkin et al 2015_New Phytologist.csv"
@@ -22,8 +23,8 @@ read_vcmax25 <- function(
   df$Vcmax25 <- df$Vcmax25*(10^6)
 
   # Rename variables
-  colnames(df) <- c("site", "lat", "lon", "elv",
-                    "species", "family", "vcmax25")
+  colnames(df) <- c("sitename", "lat", "lon", "elv",
+                    "species", "family", "Vcmax25")
 
   df
 }
