@@ -9,9 +9,9 @@ library(dplyr)
 library(tidyr)
 
 # Get Vcmax25 data
-validation_vcmax <- read_vcmax25(
+data_vcmax <- read_vcmax25(
   filename = "data-raw/GlobResp database_Atkin et al 2015_New Phytologist.csv"
 )
 
 # Create site information data.frame
-siteinfo <- create_siteinfo(validation_vcmax)
+siteinfo <- create_siteinfo(data_vcmax)
