@@ -7,8 +7,8 @@
 # are saved in the `data` folder.
 
 get_vcmax_data_rsofun <- function(
-    file_vcmax = "data-raw/GlobResp database_Atkin et al 2015_New Phytologist.csv",
-    path_worldclim = "/data/archive/worldclim_fick_2017/data",
+    file_vcmax,
+    path_worldclim,
     save_intermediate_data = FALSE){
 
   # Get Vcmax25 data
