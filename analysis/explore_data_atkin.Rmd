@@ -14,7 +14,7 @@ library(tidyverse)
 
 ```{r}
 # Read csv from Yunke
-traits <- read.csv("../rsofun_vcmax/combined_leaf_traits_updated.csv")
+traits <- read.csv("data-raw/combined_leaf_traits_updated.csv")
 
 # Filter data from Atkin et al. source
 traits <- traits |>
@@ -184,39 +184,3 @@ traits |>
   summarise(n()) |>
   summary()
 ```
-
-
-# Create siteinfo data frame
-
-Here we make a dataframe with the site information necessary to retrieve the forcing data for the P-model.
-```{r}
-siteinfo <- traits |>
-  select(site, lon, lat, z, start_yr, end_yr) |>
-  rename(sitename = site, elv = z, start_year = start_yr, end_year = end_yr) |>
-  unique()
-
-siteinfo
-```
-
-Here, we take a look at what our final result should look like:
-```{r}
-rsofun::p_model_drivers
-# Site information
-rsofun::p_model_drivers$site_info[[1]]
-# Forcing
-rsofun::p_model_drivers$forcing[[1]]
-# The rest are defined by default in the function collect_drivers_yearly()
-```
-Collect WorldClim data
-```{r}
-devtools::install_github("stineb/ingestr")
-
-settings_worldclim <- list(varnam = c("tmin", "tmax", "vapr", "srad"))
-df_wc <- ingestr::ingest(
-  siteinfo,
-  source    = "worldclim",
-  settings  = settings_worldclim,
-  dir       = "/data/archive/worldclim_fick_2014/data"
-  )
-```
-
