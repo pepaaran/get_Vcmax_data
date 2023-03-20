@@ -9,5 +9,7 @@ create_siteinfo <- function(df){
     dplyr::group_by(sitename) |>
     dplyr::summarise(lon = unique(lon),
                      lat = unique(lat),
-                     elv = unique(elv))
+                     elv = unique(elv)) |>
+    dplyr::mutate(start_year = 2001,
+                  end_year = 2015)
 }
