@@ -18,7 +18,7 @@ Here we explore the available leaf traits data, in order to use it to calibrate 
 
 ```{r}
 # Read csv from Yunke
-traits <- read.csv("../rsofun_vcmax/combined_leaf_traits_updated.csv")
+traits <- read.csv("data-raw/combined_leaf_traits_updated.csv")
 head(traits)
 colnames(traits)
 ```
