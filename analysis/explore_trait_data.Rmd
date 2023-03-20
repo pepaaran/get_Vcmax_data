@@ -1,0 +1,394 @@
+---
+title: "Traits data exploration"
+author: "Pepa Aran"
+date: "2023-03-03"
+output: html_document
+---
+
+```{r echo = FALSE}
+library(dplyr)
+library(ggplot2)
+```
+
+# Explore available traits data
+
+Yunke provides some information about the data collection and variable descriptions in [this GitHub repo](https://github.com/yunkepeng/VcmaxMS). 
+
+Here we explore the available leaf traits data, in order to use it to calibrate the P-model to Vcmax25 data.
+
+```{r}
+# Read csv from Yunke
+traits <- read.csv("../rsofun_vcmax/combined_leaf_traits_updated.csv")
+head(traits)
+colnames(traits)
+```
+
+
+Variable meaning:
+
+-  **lon**: longitude (deg)
+-  **lat**: latitude (deg)
+-  **z**: elevation (m)
+-  **start_yr** and **end_yr**: time span over which measurements were taken and averaged
+-  **source**: paper/source from which the data was obtained
+-  **site**: name of the site where the data was taken
+-  **species**, **Family** and **Genus**: information of the plant species from which the data was taken
+-  **Tleaf**: measured leaf temperature
+-  **narea**: leaf nitrogen per area (g m$^{-2}$)
+-  **parea**: leaf phosphorus per area (g m$^{-2}$)
+-  **lma**: leaf mass per area (g m$^{-2}$)
+-  **Vcmax**: Measured maximum rate of carboxylation capacity at leaf temperature ($\mu$ mol m$^{-2}$ s$^{-1}$)
+-  **Vcmax25**: Measured maximum rate of carboxylation capacity at 25 degrees ($\mu$ mol m$^{-2}$ s$^{-1}$)
+-  **Jmax**: Measured maximum rate of electron transport at leaf temperature ($\mu$ mol m$^{-2}$ s$^{-1}$)
+-  **Jmax25**: Measured maximum rate of electron transport at 25 degrees ($\mu$ mol m$^{-2}$ s$^{-1}$)
+-  **Date**: measurement date
+-  **Year**: measurement year
+-  **carea**: 
+-  **C_percent**:
+-  **Author**:
+-  **author**:
+-  **Aarea**: saturated A assimilations (Asat)
+-  **rep**:
+
+
+### Source filtering
+
+Select only observations that came from a published paper. This data, we'll be able to use for the `rsofun` documentation.
+```{r}
+# Get all different sources
+traits |>
+  select(source) |>
+  unique()
+```
+
+```{r}
+# Remove non-published sources
+source_public <- c("Atkin et al. 2015 New Phytologist",
+                   "Bahar et al 2017 New Phytologist",
+                   "Bloomfield et al 2018 New Phytologist",
+                   "Cernusak et al 2011 Agricultural and Forest Meteorology",
+                   "Maire et al. 2015 GEB",
+                   "Walker et al 2014  Ecology and Evolution",
+                   "Wang et al. 2017 Ecology",
+                   "Xu et al. 2021 Tree Physiology"
+                   )
+traits <- traits |>
+  filter(source %in% source_public)
+
+# Count available data
+traits |>
+  group_by(source) |>
+  summarise(count = n())
+```
+*From Yunke's README:* The data from Maire et al. 2015 relies on one-point method to calculate "measured" Vcmax, which brings uncertianty (up to 20\% in cold areas, accrding to Rogers paper). Atkin et al is directly measured data. Some data in Bahar et al (sites in South America) are repeated from Atkin et al.
+
+```{r}
+# Drop Maire et al. 2015 GEB data
+traits <- traits |>
+  filter(source != "Maire et al. 2015 GEB")
+
+# Plot sites on the world map
+world <- map_data("world")
+ggplot() +
+  geom_map(
+    data = world, map = world,
+    aes(x = long, y = lat, map_id = region)
+  ) +
+  geom_point(
+    data = traits |>
+      filter(!is.na(Vcmax)),
+    aes(x = lon, y = lat, color = source),
+    alpha = 0.7
+  )
+```
+
+Which sites overlap between Atking et al and Bahar et al? South American sites, and the location is more precise for the Bahar et al dataset (which also contains an extra site WAQ-01). 
+```{r}
+traits |>
+  filter(source == "Atkin et al. 2015 New Phytologist") |>
+  select(site, lon, lat) |>
+  filter(site %in% unique(filter(traits, 
+                                 source == "Bahar et al 2017 New Phytologist"
+                                 )$site)) |>
+  unique() |>
+  arrange(lon)       
+       
+traits |>
+ filter(source == "Bahar et al 2017 New Phytologist") |>
+ select(site, lon, lat) |>
+ unique() |>
+ arrange(lon)
+
+```
+
+In each data publication, over how many years did they take measurements? Atkin et al takes data over 15 years, while Bahar et al do for just one year (is this correctly interpreted?). Only for the Walker et al dataset is there variability in the timeframes in which data was measured.
+```{r}
+traits |> mutate(years = end_yr - start_yr +1) |> 
+  select(years, source) |> 
+  table()
+```
+
+When is the measurenment date provided? Only Bahar et al 2017 and Bloomfield et al 2018 provide information on the day that the sample was taken.
+```{r}
+traits |>
+  group_by(source) |>
+  summarise(date_obs = mean(!is.na(Date)),
+            num_obs = n())
+```
+
+Let's get a summary of the data for Walker et al 2014. It's data in Europe and can be interesting to compare to the FR-Pue site used in the GPP calibration. There are 18 sites and 25 combinations of site $\times$ time, and Vcmax and Vcmax25 are never missing.
+```{r}
+# Drop empty columns
+traits_walker <- traits |>
+  dplyr::filter(source == "Walker et al 2014  Ecology and Evolution") |>
+  mutate(Family = NULL, Genus = NULL, Date = NULL, site = NULL,
+         carea = NULL, C_percent = NULL, author = NULL)
+
+traits_walker |>
+  summary()
+
+traits_walker |>
+  head()
+
+
+traits_walker |>
+  select(lon, lat, start_yr, end_yr) |>
+  unique()
+```
+
+
+Below it's shown that Wang et al. data comes from 6 different sites and collection years 2012, 2004 and 2016.
+```{r}
+traits |>
+  filter(source == "Wang et al. 2017 Ecology") |>
+  select(lon, lat, start_yr, end_yr) |>
+  unique()
+```
+
+### Spatial resolution
+
+We want to use the number of decimals as proxy for spatial resolution of `lon` and `lat`, for each site.
+```{r echo = FALSE}
+# Define function to count max number of decimal digits
+count_decimal <- function(x){
+  k <- 0    # start counter
+  while(any((x %% 1) != 0.0)){
+    k <- k + 1
+    x <- x * 10
+  }
+  k
+}
+```
+
+Check the spatial resolution of the data from each publication (we assume that all sites belonging to the same original dataset have the same spatial resolution). We would like to have at least 2 decimal places (0.1 ~ 10km), because 1km resolution is fine.
+```{r}
+traits |>
+  group_by(source) |>
+  summarise(count_decimal(lon))
+```
+
+### Vcmax availability
+
+Let's see which publications provide Vcmax and Vcmax25 data.
+```{r}
+traits |>
+  group_by(source) |>
+  summarise(mean(!is.na(Vcmax)), mean(!is.na(Vcmax25)))
+```
+
+Not all publications provide Vcmax and Vcmax25 data for each observation (but they are missing at the same time). Filter data to remove missing values of Vcmax and Vcmax25.
+```{r}
+traits <- traits |>
+  tidyr::drop_na(Vcmax)
+```
+
+### Species available
+
+How much data do we have? That is, for how many different species were the traits measured?
+```{r}
+# Species per publication
+traits |>
+  group_by(source) |>
+  summarise(unique(species)) |>
+  summarise(n())
+```
+
+Now focusing only on Walker et al, how many species per site and time do we have? For the majority of sites, there's only one species (for example, Pinus pinaster), nevertheless some others there are up to 23 species. *Note: Family and Genus not provided*
+```{r}
+traits_walker |>
+  group_by(lon, lat, start_yr, end_yr) |>
+  summarise(unique(species)) |>
+  summarise(num_species = n()) 
+# Now aggregate over sites, disregarding time
+traits_walker |>
+  group_by(lon, lat) |>
+  summarise(unique(species)) |>
+  summarise(num_species = n()) 
+```
+
+### Observation replicates
+
+How many observations are there per site?
+```{r}
+traits_walker |>
+  group_by(lon, lat, start_yr, end_yr) |>
+  summarise(num_obs = n())
+```
+
+And per sampling point (spatial and temporal) *and* species, how many observations were taken?
+```{r}
+traits_walker |>
+  group_by(lon, lat, start_yr, end_yr, species) |>
+  summarise(num_obs = n())
+
+```
+
+## Data exploration
+
+Let's take a look at the relationship between Vcmax and Vcmax25, which depends on the leave temperature. Since Vcmax25 is calculated as a function of measured Vcmax and leave temperature, with a linear formula. This is easily visible below.
+```{r}
+ggplot() +
+  geom_point(data = traits_walker,
+             aes( x = Vcmax25, y = Vcmax, colour = Tleaf)) +
+  geom_abline(intercept = 0, lty = 2, col = "grey")
+```
+
+Next, let's see how Vcmax25 varies across locations around the globe.
+```{r}
+hist_Vcmax <- ggplot() +
+  geom_histogram(data = traits_walker,
+            aes(x = Vcmax))
+
+hist_Vcmax25 <- ggplot() +
+  geom_histogram(data = traits_walker,
+                 aes(x = Vcmax25))
+
+cowplot::plot_grid(hist_Vcmax, hist_Vcmax25)
+```
+
+```{r}
+# Total variation
+sd(traits_walker$Vcmax25)
+
+# Variation per site and time
+traits_walker |>
+  group_by(lon, lat, start_yr) |>
+  summarise(single_species = (length(unique(species)) == 1),
+              mean(Vcmax25), sd(Vcmax25))
+```
+
+# Create example Vcmax25 data for **rsofun**
+
+Keep only sites for which data was collected in a single year. Then take as Vcmax25 the average value over species and observations in a site-year instance, take Vcmax uncertainty equal to the respective standard deviation.
+
+```{r}
+data_vcmax <-
+  traits_walker |>
+  mutate(sitename = paste0( lon, " N, ", lat, " E")) |>
+  filter(start_yr == end_yr) |>
+  select(sitename, date = Year, Vcmax25) |>
+  group_by(sitename, date) |>
+  summarise(vcmax25 = mean(Vcmax25), 
+            vcmax25_unc = sd(Vcmax25),
+            num_obs = n()) |>
+  filter(num_obs > 2) |>
+  ungroup() |>
+  select(sitename, date, vcmax25, vcmax25_unc)
+```
+
+*Problem*: The Walker et al. dataset does not provide site names. Therefore, we need to create a name for it.
+```{r}
+p_model_validation_vcmax25 <- tibble(sitename = unique(data_vcmax$sitename),
+       data = lapply(unique(data_vcmax$sitename),
+                     function(site){
+                       data_vcmax |>
+                         filter(sitename == site)
+                     })) 
+
+p_model_validation_vcmax25$data[[4]]
+
+```
+
+## Produce artificial P-model drivers from the available `p_model_drivers`
+
+We will inflate growing-season-average climate data (to be obtained) such that it's 365 days of data per year. This matches the structure of inputs imposed by `rsofun`.
+```{r}
+p_model_drivers_vcmax25 <- rsofun::p_model_drivers
+
+p_model_drivers_vcmax25$sitename <- "-0.46 N, 44.42 E"
+
+# Define year average climate (assume growing season between doy 80-270)
+p_model_drivers_vcmax25$forcing[[1]] <- p_model_drivers_vcmax25$forcing[[1]] |>
+  mutate(year = format(date, "%Y")) |>
+  filter(doy > 80, doy < 270) |>
+  group_by(year) |>
+  summarise(temp = mean(temp), 
+            prec = mean(prec),
+            vpd = mean(vpd),
+            ppfd = mean(ppfd),
+            patm = mean(patm),
+            ccov_int = mean(ccov_int),
+            ccov = mean(ccov),
+            snow = mean(snow),
+            rain = mean(rain),
+            fapar = mean(fapar),
+            co2 = mean(co2),
+            tmin = mean(tmin),
+            tmax = mean(tmax)) |>
+  slice(rep(1:n(), each = 365)) |>
+  ungroup() |>
+  mutate(date = p_model_drivers_vcmax25$forcing[[1]]$date)
+
+# Let's take a look
+p_model_drivers_vcmax25$forcing[[1]]
+
+p_model_drivers_vcmax25
+```
+
+Now, try running the P-model and do the calibration.
+```{r}
+params_modl <- list(
+    kphio           = 0.09423773,
+    soilm_par_a     = 0.33349283,
+    soilm_par_b     = 1.45602286,
+    tau_acclim_tempstress = 10,
+    par_shape_tempstress  = 0.0
+  )
+
+# run the model for these parameters
+output <- rsofun::runread_pmodel_f(
+  p_model_drivers_vcmax25,
+  par = params_modl
+  )
+
+# Plot output
+model_data <- output %>%
+  filter(sitename == "-0.46 N, 44.42 E") %>%
+  tidyr::unnest(data)
+
+validation_data <- p_model_validation_vcmax25 %>%
+  filter(sitename == "-0.46 N, 44.42 E") %>%
+  tidyr::unnest_legacy(data) |>
+  mutate(date = as.Date("01-01-2007", "%d-%m-%Y"))
+
+ggplot() +
+    geom_line(
+    data = model_data,
+    aes(
+      date,
+      vcmax25
+    ),
+    colour = "red",
+    alpha = 0.8
+  ) +
+  geom_hline(
+    yintercept = validation_data$vcmax25,
+    alpha = 0.8
+  ) +
+  labs(
+    x = "Date",
+    y = "Vcmax25"
+  )
+```
+
+It looks like the Vcmax25 data may be given in different units to the output of the P-model. The predicted and observed values (although for different sites) are orders of magnitude away ($10^{-6}$).

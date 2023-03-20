@@ -1,0 +1,222 @@
+---
+title: "Explore Vcmax data from Atkin et al."
+author: "Pepa Aran"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r echo = FALSE}
+# Load packages
+library(tidyverse)
+```
+
+# Traits data exploration from Atkin et al. 2015
+
+```{r}
+# Read csv from Yunke
+traits <- read.csv("../rsofun_vcmax/combined_leaf_traits_updated.csv")
+
+# Filter data from Atkin et al. source
+traits <- traits |>
+  filter(source == "Atkin et al. 2015 New Phytologist") |>
+  mutate(source = NULL) # remove useless column
+
+traits
+```
+
+Variable meaning:
+
+-  **lon**: longitude (deg)
+-  **lat**: latitude (deg)
+-  **z**: elevation (m)
+-  **start_yr** and **end_yr**: time span over which measurements were taken and averaged
+-  **source**: paper/source from which the data was obtained
+-  **site**: name of the site where the data was taken
+-  **species**, **Family** and **Genus**: information of the plant species from which the data was taken
+-  **Tleaf**: measured leaf temperature
+-  **narea**: leaf nitrogen per area (g m$^{-2}$)
+-  **parea**: leaf phosphorus per area (g m$^{-2}$)
+-  **lma**: leaf mass per area (g m$^{-2}$)
+-  **Vcmax**: Measured maximum rate of carboxylation capacity at leaf temperature ($\mu$ mol m$^{-2}$ s$^{-1}$)
+-  **Vcmax25**: Measured maximum rate of carboxylation capacity at 25 degrees ($\mu$ mol m$^{-2}$ s$^{-1}$)
+
+## Clean missing values
+
+```{r}
+# Get missing values summary
+traits |>
+  apply(2, function(x) mean(!is.na(x)))
+
+# Remove empty columns
+traits <- traits |>
+  mutate(Jmax = NULL,
+         Jmax25 = NULL,
+         Date = NULL,
+         Year = NULL,
+         carea = NULL,
+         C_percent = NULL,
+         Author = NULL,
+         author = NULL,
+         Aarea = NULL,
+         rep = NULL)
+```
+
+The location and site information variables are never missing, but some measurements are lacking sometimes. Most importantly, Vcmax and Vcmax25 are `NA` is approx 76\% of the rows.
+
+```{r}
+# Remove rows with missing Vcmax
+traits <- traits |>
+  drop_na(Vcmax, Vcmax25)
+```
+
+## Data availability accross the globe
+
+Longitud, latitud and elevation values are unique per site. Where are those sites?
+```{r}
+# Plot sites on the world map
+world <- map_data("world")
+ggplot() +
+  geom_map(
+    data = world, map = world,
+    aes(x = long, y = lat, map_id = region)
+  ) +
+  geom_point(
+    data = traits |>
+      filter(!is.na(Vcmax)),
+    aes(x = lon, y = lat),
+    colour = "red",
+    alpha = 0.3
+  )
+```
+
+The observation sites are distributed throughout the world, with more observations from the Americas and Australia. Thus representing various ecosystems and climates. Let's take a look at how many sites and observations there are.
+```{r}
+obs_sites <- left_join(
+  x = traits |>
+    group_by(site) |>
+    summarise(num_obs = n()),
+  y = traits |>
+    group_by(site) |>
+    summarise(num_species = length(unique(species)))
+)
+
+hist(obs_sites$num_species, breaks = 30,
+     main = "Histogram of species per site", xlab = "Number of species per site")
+hist(obs_sites$num_obs, breaks = 30,
+     main = "Histogram of observations per site", xlab = "Number of observations per site")
+```
+
+There are a total of 98 sites. For each site, a single measurement is given per species. The number of species ranges from 1 to 68. On average, a site has 12 species.
+
+## Years of observation
+
+Data is always taken between 2001 and 2015. 
+```{r}
+# Calculate over how many years the observations were taken
+traits |>
+  mutate(years = end_yr - start_yr + 1) |>
+  select(years, start_yr) |>
+  summary()
+```
+
+## Clean species, Family and Genus
+
+Are these three variables redundant? Genus is always the first word of the species description. So we can remove that variable.
+```{r}
+traits |>
+  select(site, species, Family, Genus)
+
+traits <- traits |>
+  mutate(Genus = NULL)
+```
+
+Let's see how many species and families there are in total. We already saw the variety in species per site above.
+```{r}
+length(unique(traits$species))
+length(unique(traits$Family))
+```
+
+# Exploring Vcmax and Vcmax25 values
+
+```{r}
+ggplot() +
+  geom_point(data = traits,
+             aes( x = Vcmax25, y = Vcmax, colour = Tleaf)) +
+  geom_abline(intercept = 0, lty = 2, col = "grey")
+
+hist_Vcmax <- ggplot() +
+  geom_histogram(data = traits,
+            aes(x = Vcmax))
+
+hist_Vcmax25 <- ggplot() +
+  geom_histogram(data = traits,
+                 aes(x = Vcmax25))
+
+cowplot::plot_grid(hist_Vcmax, hist_Vcmax25)
+```
+
+```{r}
+# Calculate variation of Vcmax25 per site
+traits |>
+  group_by(site) |>
+  summarise(vcmax25 = mean(Vcmax25), 
+            vcmax25_sd = sd(Vcmax25))
+```
+
+```{r}
+ggplot() +
+  geom_point(data = traits,
+             aes( x = site, y = Vcmax25))
+```
+Problem: Do we discard the sites with a single species? This is a decision that will certainly bias the calibration. In that case, we will need to come up with an idea of how to calculate the uncertianty in Vcmax25.
+
+Decision with Beni: Use the average sd for all observations, that way we keep the sites with just one species. Now, the GPP uncertainty is the variance of the 40 time series of the filtering in Flux processing of GPP.
+
+There are 7 sites that have only one species/observation. In total, for 10 sites we cannot compute the standard deviation.
+```{r}
+summary(obs_sites$num_obs == obs_sites$num_species)
+obs_sites$num_obs |> table()
+```
+
+```{r}
+traits |>
+  group_by(site, species) |>
+  summarise(n()) |>
+  summary()
+```
+
+
+# Create siteinfo data frame
+
+Here we make a dataframe with the site information necessary to retrieve the forcing data for the P-model.
+```{r}
+siteinfo <- traits |>
+  select(site, lon, lat, z, start_yr, end_yr) |>
+  rename(sitename = site, elv = z, start_year = start_yr, end_year = end_yr) |>
+  unique()
+
+siteinfo
+```
+
+Here, we take a look at what our final result should look like:
+```{r}
+rsofun::p_model_drivers
+# Site information
+rsofun::p_model_drivers$site_info[[1]]
+# Forcing
+rsofun::p_model_drivers$forcing[[1]]
+# The rest are defined by default in the function collect_drivers_yearly()
+```
+Collect WorldClim data
+```{r}
+devtools::install_github("stineb/ingestr")
+
+settings_worldclim <- list(varnam = c("tmin", "tmax", "vapr", "srad"))
+df_wc <- ingestr::ingest(
+  siteinfo,
+  source    = "worldclim",
+  settings  = settings_worldclim,
+  dir       = "/data/archive/worldclim_fick_2014/data"
+  )
+```
+
