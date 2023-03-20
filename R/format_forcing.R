@@ -39,10 +39,16 @@ format_forcing <- function(
     ),
     verbose = TRUE){
 
-  # Expand forcing to 365 days and get into nested format
+  # Define vector of dates in 2015
+  dates <-seq(from = as.Date("01-01-2015", format = "%d-%m-%Y"),
+    to = as.Date("31-12-2015", format = "%d-%m-%Y"),
+    by = 1)
+
+  # Expand forcing to 365 days, add date column and get into nested format
   drivers <- forcing_wc |>
     dplyr::mutate(lon = NULL, lat = NULL, elv = NULL) |>
     dplyr::slice(rep(1:n(), each = 365)) |>
+    dplyr::mutate(date = dates) |>
     dplyr::group_by(sitename) |>
     tidyr:: nest() |>
     dplyr::rename(forcing = data)
