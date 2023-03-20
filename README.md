@@ -31,18 +31,14 @@ get_vcmax_data_rsofun(
 # The outputs are saved in the `data` directory
 ```
 
+The WorldClim data can be obtained from https://worldclim.org/data/worldclim21.html
+and the [GlobResp](https://nph.onlinelibrary.wiley.com/doi/full/10.1111/nph.13364)
+leaf traits data from [Atkin et al. 2015](https://nph.onlinelibrary.wiley.com/doi/10.1111/nph.13253)
+via the [TRY database](https://www.try-db.org/de/Datasets.php).
 
-
-
-
---------------------------
-
-
-It must be noted that some of the functionality as provided by this setup is
-included in the [`usethis`](https://usethis.r-lib.org/) R package, the aim is 
-slightly different. For one, `usethis` is aimed at populating a package structure.
-Second, there is not preset full template, hence many individual decisions still
-need to be made and code executed. This is bypassed by this setup.
+The [ingestr](https://github.com/geco-bern/ingestr) package is used extract 
+WorldClim climate data for the leaf trait sites. The data formatting functions are
+inspired by the [FluxDataKit](https://github.com/geco-bern/FluxDataKit) package.
 
 ## Structure
 
