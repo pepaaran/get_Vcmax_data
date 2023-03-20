@@ -37,7 +37,9 @@ leaf traits data from [Atkin et al. 2015](https://nph.onlinelibrary.wiley.com/do
 via the [TRY database](https://www.try-db.org/de/Datasets.php).
 
 The [ingestr](https://github.com/geco-bern/ingestr) package is used extract 
-WorldClim climate data for the leaf trait sites. The data formatting functions are
+WorldClim climate data for the leaf trait sites and the data aggregation follows
+the instructions in the [Run the P-model for point simulations](https://geco-bern.github.io/ingestr/articles/run_pmodel_points.html)
+vignette. The data formatting functions are
 inspired by the [FluxDataKit](https://github.com/geco-bern/FluxDataKit) package.
 
 ## Structure
