@@ -23,7 +23,7 @@ get_vcmax_data_rsofun <- function(
   df_wc <- ingestr::ingest(
     siteinfo,
     source    = "worldclim",
-    settings = list(varnam = c("tmin", "tmax", "vapr", "srad")),
+    settings = list(varnam = c("tmin", "tmax", "vapr", "srad", "prec", "tavg")),
     dir       = path_worldclim
   )
 
