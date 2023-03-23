@@ -10,6 +10,6 @@ create_siteinfo <- function(df){
     dplyr::summarise(lon = unique(lon),
                      lat = unique(lat),
                      elv = unique(elv)) |>
-    dplyr::mutate(start_year = 2001,
-                  end_year = 2015)
+    dplyr::mutate(year_start = 2001,
+                  year_end = 2015)
 }
