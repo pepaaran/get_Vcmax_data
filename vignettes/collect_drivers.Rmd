@@ -1,0 +1,151 @@
+---
+title: "Collect drivers"
+author: "Pepa Aran"
+date: "2023-03-20"
+output: html_document
+---
+
+```{r}
+# Install packages for data collection
+library(dplyr); library(tidyr);
+library(raster)
+if(!require(devtools)){install.packages("devtools")}
+devtools::install_github("geco-bern/ingestr")
+library(ingestr)
+devtools::install_github("geco-bern/rsofun")
+library(rsofun)
+
+# Load functions from this repo
+source("R/read_vcmax25.R")
+source("R/create_siteinfo.R")
+```
+
+```{r}
+# Get Vcmax25 data
+data_vcmax <- read_vcmax25(
+  filename = "data-raw/GlobResp database_Atkin et al 2015_New Phytologist.csv"
+)
+
+# Create site information data.frame
+siteinfo <- create_siteinfo(data_vcmax)
+```
+
+## Complement siteinfo with water holding capacity (WHC)
+
+We use data from Stocker et al. 2021 to get the WHC for
+our sites. The data is in 0.05 degree resolution, which is appropriate
+for this use case because we have enough resolution for the forcing
+(we will use WorldClim bias correction to downscale spatially).
+
+```{r}
+# Define function to extract whc
+extract_whc <- function(file, siteinfo){
+
+  siteinfo <- siteinfo[, c("lon", "lat")] |>
+    unique()                                   # Remove repeated coordinates
+  
+  rasta <- raster::brick(file)
+  
+  raster::extract(
+    rasta,                                            # raster object
+    sp::SpatialPoints(siteinfo[, c("lon", "lat")]),   # points
+    sp = TRUE                                         # add raster values to siteinfo
+  ) |>
+    tibble::as_tibble() |>
+    dplyr::rename(whc = layer)
+}
+```
+
+```{r}
+# Get WHC data
+path_whc <- "/data/archive/whc_stocker_2021/data"
+
+df_whc <- extract_whc(file = paste0(path_whc, "/cwdx80.nc"),
+            siteinfo = siteinfo)
+
+# Merge whc with site information
+siteinfo <- dplyr::left_join(
+  siteinfo,
+  df_whc,
+  by = c("lon", "lat")
+  )
+
+# Fill gaps by median value (here there are no NAs)
+siteinfo$whc[is.na(siteinfo$whc)] <- median(siteinfo$whc,
+                                            na.rm = TRUE)
+```
+
+## Get meteorological forcing
+
+We rely on `ingestr` to read forcing variables from various data sources.
+The following meteorological variables are obtained for the P-model forcing
+from the WATCH-WFDEI data:
+- `temp`: Daily temperature
+- `prec`: Daily precipitation
+- `ppfd`: Photosynthetic photon flux density
+- `vpd`: Vapor pressure deficit
+- `patm`: Atmospheric pressure
+
+```{r}
+# Get WATCH data
+path_watch <- "/data/archive/wfdei_weedon_2014/data"
+path_worldclim <- "/data/archive/worldclim_fick_2017/data" # for debiasing
+
+df_watch <- ingestr::ingest(
+  siteinfo = siteinfo,
+  source = "watch_wfdei",
+  getvars = c("temp", "prec", "ppfd", "vpd", "patm"),
+  dir = path_watch,
+  settings = list(
+    correct_bias = "worldclim",    # 0.5 deg
+    dir_bias = path_worldclim
+  )
+)
+
+# Memory intensive, purge memory
+gc()
+```
+
+Now, we'll complete the forcing with cloud cover `ccov` values from CRU data. 
+```{r}
+# Get CRU data
+path_cru <- "/data/archive/cru_NA_2021/data"
+
+df_cru <- ingestr::ingest(
+  siteinfo = siteinfo,
+  source = "cru",
+  getvars = c("ccov"),
+  dir = path_cru,
+  settings = list(
+    correct_bias = NULL       # 0.5 deg resolution
+  )
+)
+
+```
+
+## Get CO2 data
+
+```{r}
+path_co2 <- "/data/scratch/co2"
+
+df_co2 <- ingestr::ingest(
+  siteinfo,
+  source = "co2_cmip",
+  dir = path_co2
+)
+
+df_co2 <- read.csv("data-raw/co2_annmean_mlo.csv",
+                   skip = 59)                         # skip comment lines
+```
+
+
+```{r}
+# Define function to ingest CO2 data
+ingest_co2 <- function(file, siteinfo){
+ # Read co2 data
+ df_co2 <- read.csv(file, skip = 59)       # skip comment lines
+ 
+}
+```
+
+
