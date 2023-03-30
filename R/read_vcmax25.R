@@ -13,7 +13,7 @@ read_vcmax25 <- function(
   df <- read.csv(filename)
 
   # Select relevant variables
-  df <- df[, c("site", "lat", "lon", "z",
+  df <- df[, c("site", "lat", "lon", "z", "Atm_Press",
                "species", "Family", "Vcmax25")]
 
   # Remove NAs
@@ -23,7 +23,7 @@ read_vcmax25 <- function(
   df$Vcmax25 <- df$Vcmax25*(10^6)
 
   # Rename variables
-  colnames(df) <- c("sitename", "lat", "lon", "elv",
+  colnames(df) <- c("sitename", "lat", "lon", "elv", "patm",
                     "species", "family", "Vcmax25")
 
   df
