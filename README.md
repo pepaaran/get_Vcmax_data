@@ -1,6 +1,6 @@
 # Get Vcmax25 data to run P-model
 
-This repository contains the code used to retrieve the Vcmax25 data used for validation of the P-model as implemented in [`rsofun`](https://github.com/geco-bern/rsofun). Furthermore, it creates the respective forcing data to run the P-model from the WorldClim dataset. The final products are two `rsofun` nested dataframes, the drivers and validation Vcmax25 data.
+This repository contains the code used to retrieve the Vcmax25 data used for validation of the P-model as implemented in [`rsofun`](https://github.com/geco-bern/rsofun). Furthermore, it creates the respective forcing data to run the P-model, either from the WorldClim dataset (resulting dataset is incomplete to run the P-model) or from WATCH-WFDEI + others (see [this vignette](https://github.com/pepaaran/ingestr/blob/master/vignettes/get_drivers_coordinates.Rmd) for details). The final products are two `rsofun` nested dataframes, the drivers and validation Vcmax25 data.
 
 The following code creates the objects `p_model_drivers_vcmax25` and
 `p_model_validation_vcmax25` from the raw data:
@@ -8,8 +8,9 @@ The following code creates the objects `p_model_drivers_vcmax25` and
 ```{r}
 # Load libraries
 library(dplyr); library(tidyr);
+library(tibble); library(raster);
 if(!require(devtools)){install.packages("devtools")}
-devtools::install_github("geco-bern/ingestr")
+devtools::install_github("pepaaran/ingestr")
 library(ingestr)
 
 # Load functions
@@ -20,27 +21,35 @@ source("R/format_forcing.R")
 source("R/format_validation.R")
 source("R/get_vcmax_data_rsofun.R")
 
-# Get Vcmax25 data + WorldClim drivers into rsofun format
-# using the data archive structure on the GECO workstations
+# Get Vcmax25 data + average year forcing
 get_vcmax_data_rsofun(
-  file_vcmax = "data-raw/GlobResp database_Atkin et al 2015_New Phytologist.csv",
-  path_worldclim = "/data/archive/worldclim_fick_2017/data",
-  save_intermediate_data = FALSE
-)
+  source = "watch-wfdei"
+) # Use default data archive file paths
 
 # The outputs are saved in the `data` directory
+
+# Incomplete: Get Vcmax25 data + WorldClim drivers into rsofun format
+# using the data archive structure on the GECO workstations
+get_vcmax_data_rsofun(
+  source = "worldclim",
+  file_vcmax = "data-raw/GlobResp database_Atkin et al 2015_New Phytologist.csv",
+  path_worldclim = "/data/archive/worldclim_fick_2017/data"
+)
 ```
 
 The WorldClim data can be obtained from https://worldclim.org/data/worldclim21.html
 and the [GlobResp](https://nph.onlinelibrary.wiley.com/doi/full/10.1111/nph.13364)
 leaf traits data from [Atkin et al. 2015](https://nph.onlinelibrary.wiley.com/doi/10.1111/nph.13253)
-via the [TRY database](https://www.try-db.org/de/Datasets.php).
+via the [TRY database](https://www.try-db.org/de/Datasets.php). Other data sources are described
+in [the GECO data archive repository](https://github.com/geco-bern/data_management).
 
 The [ingestr](https://github.com/geco-bern/ingestr) package is used extract 
-WorldClim climate data for the leaf trait sites and the data aggregation follows
+forcing data for the leaf trait sites and the data aggregation follows
 the instructions in the [Run the P-model for point simulations](https://geco-bern.github.io/ingestr/articles/run_pmodel_points.html)
 vignette. The data formatting functions are
 inspired by the [FluxDataKit](https://github.com/geco-bern/FluxDataKit) package.
+[This vignette](https://github.com/pepaaran/ingestr/blob/master/vignettes/get_drivers_coordinates.Rmd)
+goes through the workflow implemented in the functions used above, step by step.
 
 ## Structure
 
