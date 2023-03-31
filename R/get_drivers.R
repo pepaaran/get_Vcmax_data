@@ -132,8 +132,6 @@ df_meteo <- df_meteo |>
 df_meteo <- df_meteo |>
   dplyr::mutate(fapar = 1)
 
-#---- Format nested data
-
 # Nest forcing
 df_meteo <- df_meteo |>
   dplyr::group_by(sitename) |>
@@ -141,12 +139,34 @@ df_meteo <- df_meteo |>
   dplyr::rename(forcing = data) |>
   dplyr::ungroup()
 
-# Add site information
-df_siteinfo <- siteinfo |>
-  dplyr::group_by(sitename) |>
-  tidyr::nest() |>
-  dplyr::rename(site_info = data) |>
-  dplyr::ungroup()
+#---- Aggregate forcing across years ----
+
+# Define function to aggregate forcing over day of year
+aggregate_forcing_doy <- function(forcing){
+  forcing |>
+    dplyr::group_by(doy) |>
+    summarise(date = first(date),                # 2001 as symbolic date
+              temp = mean(temp, na.rm = TRUE),
+              rain = mean(rain, na.rm = TRUE),
+              vpd = mean(vpd, na.rm = TRUE),
+              ppfd = mean(ppfd, na.rm = TRUE),
+              snow = mean(snow, na.rm = TRUE),
+              co2 = mean(co2, na.rm = TRUE),
+              fapar = mean(fapar, na.rm = TRUE),
+              patm = mean(patm, na.rm = TRUE),
+              tmin = mean(tmin, na.rm = TRUE),
+              tmax = mean(tmax, na.rm = TRUE),
+              ccov = mean(ccov, na.rm = TRUE)
+    ) |>                               # already ungrouped
+    dplyr::slice(1:365)                          # ignore leap years
+}
+
+# Compute aggregated drivers
+df_meteo <- df_meteo |>
+  dplyr::mutate(forcing =
+                  lapply(df_meteo$forcing, aggregate_forcing_doy))
+
+#---- Format nested data
 
 # Define default model parameters, soil data, etc
 params_siml <- list(
@@ -184,6 +204,13 @@ df_soiltexture <- bind_rows(
     forg = 0.1,
     fgravel = 0.1)
 )
+
+# Nest site information
+df_siteinfo <- siteinfo |>
+  dplyr::group_by(sitename) |>
+  tidyr::nest() |>
+  dplyr::rename(site_info = data) |>
+  dplyr::ungroup()
 
 # Finally put it all into drivers object
 p_model_drivers_vcmax25 <- df_meteo |>
