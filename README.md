@@ -82,3 +82,7 @@ into `intermediate_data.RData` and can be used for analysis.
 This folder contains the files used by `renv` to manage the R packages used in
 this repository. The `renv.lock` file contains information of the packages
 currently used in the project and their version.
+
+### The analysis folder
+
+It contains R markdown files that explore the Vcmax25 data from GlobResp.
