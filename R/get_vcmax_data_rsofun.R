@@ -11,9 +11,9 @@ get_vcmax_data_rsofun <- function(
     source, # either "worldclim" or "watch-wfdei"
     file_vcmax = "data-raw/GlobResp database_Atkin et al 2015_New Phytologist.csv",
     path_worldclim = "/data/archive/worldclim_fick_2017/data",
-    path_whc <- "/data/archive/whc_stocker_2021/data",
-    path_watch <- "/data/archive/wfdei_weedon_2014/data",
-    path_cru <- "/data/archive/cru_NA_2021/data/"
+    path_whc = "/data/archive/whc_stocker_2021/data",
+    path_watch = "/data/archive/wfdei_weedon_2014/data",
+    path_cru = "/data/archive/cru_NA_2021/data/"
     ){
 
   # Load helper functions
