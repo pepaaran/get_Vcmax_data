@@ -20,7 +20,7 @@ read_vcmax25 <- function(
   df <- df[!is.na(df$Vcmax25), ]
 
   # Change Vcmax units to mol C m^{-2} d^{-1}
-  df$Vcmax25 <- df$Vcmax25*(10^6)
+  df$Vcmax25 <- df$Vcmax25/(10^6)
 
   # Rename variables
   colnames(df) <- c("sitename", "lat", "lon", "elv", "patm",
