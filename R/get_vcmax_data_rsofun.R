@@ -1,4 +1,4 @@
-# From raw data to P-model input and validation data
+# From raw data to P-model input and validation data - OLD VERSION
 
 # This function reads the raw Vcmax25 and climate data from
 # the given (full) paths, collects the relevant information and creates
