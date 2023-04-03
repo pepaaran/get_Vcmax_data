@@ -20,6 +20,7 @@ read_vcmax25 <- function(
   df <- df[!is.na(df$Vcmax25), ]
 
   # Change Vcmax units to mol C m^{-2} d^{-1}
+  # Original data is in micro mol C m^{-2} d^{-1}
   df$Vcmax25 <- df$Vcmax25/(10^6)
 
   # Rename variables
